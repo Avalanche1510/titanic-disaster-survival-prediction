@@ -2,8 +2,8 @@ import torch
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-from preprocess import *
-from timer import Timer
+from module.preprocess import *
+from module.timer import Timer
 
 
 def main():
