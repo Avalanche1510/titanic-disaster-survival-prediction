@@ -23,7 +23,8 @@ def gradient_desc(features, labels, weights, lr, epoch, batch_scale=-1):
         for X_batch, y_batch in data:
             # calculate loss
             loss = Loss(X_batch, y_batch, weights)
-            epoch_loss += loss
+            # calculate weighted loss for this epoch as process
+            epoch_loss += loss * (y_batch.shape[0] / labels.shape[0])
             if loss == np.inf:
                 print("gradient explosion takes place!")
                 return None
@@ -35,7 +36,7 @@ def gradient_desc(features, labels, weights, lr, epoch, batch_scale=-1):
             # refresh the computational graph and clear the gradients of weights calculated in this epoch
             weights.grad.zero_()
         if e % int(epoch / 16) == 0:
-            print(f"epoch: {e + 1}, loss: {epoch_loss/(features.shape[0]//(batch_scale*32)+1)}")
+            print(f"epoch: {e + 1}, loss: {epoch_loss}")
     timer.stop()
     return weights
 
@@ -75,7 +76,7 @@ def main(gpu=False):
     # there's 10 weights for 10 features and 1 bias, in total 11 weights.
     weights = torch.tensor(np.random.randn(11, 1), dtype=torch.float32).to(device)
     weights.requires_grad_()
-    print(gradient_desc(train_features, train_labels, weights, 0.001, 5000, 1))
+    print(gradient_desc(train_features, train_labels, weights, 0.001, 5000, -1))
 
 
 if __name__ == "__main__":
