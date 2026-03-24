@@ -4,7 +4,7 @@ import numpy as np
 
 
 def train_set():
-    df = pd.read_csv("../dataset/train.csv")
+    df = pd.read_csv("../titanic-disaster-survival-prediction/dataset/train.csv")
     # these column was removed as no obvious relationship to the label or too much missing data
     df = df.drop(columns=["PassengerId", "Name", "Ticket", "Cabin"])
     # remove the samples without Age or Embarked
@@ -16,7 +16,7 @@ def train_set():
 
 
 def test_set():
-    df_features = pd.read_csv("../dataset/test.csv")
+    df_features = pd.read_csv("../titanic-disaster-survival-prediction/dataset/test.csv")
     # these column was removed as no obvious relationship to the label or too much missing data
     df_features = df_features.drop(columns=["PassengerId", "Name", "Ticket", "Cabin"])
     # remove the samples without Age or Embarked
@@ -24,7 +24,7 @@ def test_set():
     # do one hot encoding for Embarked and Sex
     df_features = pd.get_dummies(df_features, columns=["Sex", "Embarked"], dtype=int)
 
-    df_labels = pd.read_csv("../dataset/gender_submission.csv")
+    df_labels = pd.read_csv("../titanic-disaster-survival-prediction/dataset/gender_submission.csv")
     df_labels = df_labels.drop(columns=["PassengerId"])
 
     return df_features, df_labels
