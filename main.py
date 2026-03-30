@@ -81,12 +81,16 @@ def main(gpu=False):
     print(f"device using: {device}")
 
     # initialise data
-    train_features, train_labels = to_tensor("train")
-    test_features, test_labels = to_tensor("test")
-    train_features = train_features.to(device)
-    train_labels = train_labels.to(device)
-    test_features = test_features.to(device)
-    test_labels = test_labels.to(device)
+    df_features, df_labels = train_set()
+    test_features = to_tensor(test_set())
+
+
+    train_features, train_labels = to_tensor(df_features, df_labels)
+
+    if gpu:
+        train_features = train_features.to(device)
+        train_labels = train_labels.to(device)
+        test_features = test_features.to(device)
 
     # normalize using z-score
     validate_features = train_features.clone()
@@ -97,14 +101,20 @@ def main(gpu=False):
     evaluate(weights, train_features, train_labels)
     weights.requires_grad_()
 
+    # print(train_labels.shape)
+    # print((train_labels[train_labels == 0]).shape)
+    # print((train_labels[train_labels==1]).shape)
+
     # training using gradient descending
     trained_weights = gradient_desc(train_features, train_labels, weights, 0.002, 5000, -1)
     # de-normalize the weights
     trained_weights = de_normalise(trained_weights, mean, std)
 
     # evaluate the results
-    print(evaluate(trained_weights, validate_features, train_labels))
-    print(evaluate(trained_weights, validate_features, train_labels, mode="confusion_matrix"))
+    print("accuracy: ", evaluate(trained_weights, validate_features, train_labels, mode="accuracy"))
+    print("precision: ", evaluate(trained_weights, validate_features, train_labels, mode="precision"))
+    print("recall: ", evaluate(trained_weights, validate_features, train_labels, mode="recall"))
+    print("confusion matrix: ", evaluate(trained_weights, validate_features, train_labels, mode="confusion_matrix"))
     print(trained_weights)
 
 

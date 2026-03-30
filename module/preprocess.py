@@ -1,3 +1,5 @@
+import types
+
 import pandas as pd
 import torch
 import numpy as np
@@ -24,21 +26,15 @@ def test_set():
     # do one hot encoding for Embarked and Sex
     df_features = pd.get_dummies(df_features, columns=["Sex", "Embarked"], dtype=int)
 
-    df_labels = pd.read_csv("../titanic-disaster-survival-prediction/dataset/gender_submission.csv")
-    df_labels = df_labels.drop(columns=["PassengerId"])
-
-    return df_features, df_labels
+    return df_features
 
 
-def to_tensor(option="train"):
-    if option == "train":
-        features, labels = train_set()
-        return torch.tensor(np.array(features), dtype=torch.float32), torch.tensor(np.array(labels), dtype=torch.float32).reshape(-1, 1)
-    elif option == "test":
-        features, labels = test_set()
-        return torch.tensor(np.array(features), dtype=torch.float32), torch.tensor(np.array(labels), dtype=torch.float32).reshape(-1, 1)
+def to_tensor(features, labels=None):
+    if labels is None:
+        return torch.tensor(np.array(features), dtype=torch.float32)
     else:
-        return None
+        return torch.tensor(np.array(features), dtype=torch.float32), torch.tensor(np.array(labels),
+                                                                                   dtype=torch.float32).reshape(-1, 1)
 
 
 def main(option="train"):
