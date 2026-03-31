@@ -1,7 +1,7 @@
 import torch
 
 
-def evaluate(weights, test_features, test_labels, mode="accuracy"):
+def evaluate(weights, test_features, test_labels, mode="accuracy", single_output=True):
     predict_labels = test_features @ weights[1:] + weights[0]
     predict_labels = torch.sigmoid(predict_labels)
     predict = predict_labels > 0.5
@@ -25,10 +25,19 @@ def evaluate(weights, test_features, test_labels, mode="accuracy"):
     if mode == "confusion_matrix":
         return true_positive, false_positive, true_negative, false_negative
     elif mode == "recall":
-        return true_positive / (true_positive + false_negative), true_negative / (true_negative + false_positive)
+        if single_output:
+            return true_positive / (true_positive + false_negative)
+        else:
+            return true_positive / (true_positive + false_negative), true_negative / (true_negative + false_positive)
     elif mode == "accuracy":
-        return (true_positive+true_negative)/sample_num, (false_positive+false_negative)/sample_num
+        if single_output:
+            return (true_positive + true_negative) / sample_num
+        else:
+            return (true_positive+true_negative)/sample_num, (false_positive+false_negative)/sample_num
     elif mode == "precision":
-        return true_positive / (true_positive + false_positive), true_negative / (true_negative + false_negative)
+        if single_output:
+            return true_positive / (true_positive + false_positive)
+        else:
+            return true_positive / (true_positive + false_positive), true_negative / (true_negative + false_negative)
     else:
         return None

@@ -96,85 +96,18 @@ def sampling(df_features, df_labels, seed, method="random_frac", frac=0.8):
 def main(gpu=False):
     seed = 42
     np.random.seed(seed)
-    # switch device: gpu/cpu
-    if gpu:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    else:
-        device = torch.device("cpu")
-    print(f"device using: {device}")
 
-    # multiple runs of model to get average performance
-    run = 10
-    accuracy = []
-    recall = []
-    precision = []
+    # initialise train and test datasets
+    df_features, df_labels = train_set()
+    df_labels = pd.DataFrame(df_labels)
+    test_features = to_tensor(test_set())
 
-    for run_index in range(run):
-        # set different random seed by the number of runs
-        np.random.seed(run_index)
+    # sampling method apply to the data to separate train set and validation set
+    train_features, train_labels, validation_features, validation_labels = sampling(df_features, df_labels, seed,
+                                                                                    method="stratify", frac=0.8)
 
-        # initialise train and test datasets
-        df_features, df_labels = train_set()
-        df_labels = pd.DataFrame(df_labels)
-        test_features = to_tensor(test_set())
 
-        # sampling method apply to the data to separate train set and validation set
-        train_features, train_labels, validation_features, validation_labels = sampling(df_features, df_labels, seed, method="stratify", frac=0.8)
 
-        train_features, train_labels = to_tensor(train_features, train_labels)
-        validation_features, validation_labels = to_tensor(validation_features, validation_labels)
-        print(train_features.shape, train_labels.shape)
-        print(validation_features.shape, validation_labels.shape)
-
-        if gpu:
-            train_features = train_features.to(device)
-            train_labels = train_labels.to(device)
-            validation_features = validation_features.to(device)
-            validation_labels = validation_labels.to(device)
-            test_features = test_features.to(device)
-
-        # normalize using z-score
-        train_features, mean, std = normalise(train_features, "z-score")
-
-        # there's 10 weights for 10 features and 1 bias, in total 11 weights.
-        weights = torch.tensor(np.random.randn(11, 1), dtype=torch.float32).to(device)
-        evaluate(weights, train_features, train_labels)
-        weights.requires_grad_()
-
-        # print(train_labels.shape)
-        # print((train_labels[train_labels == 0]).shape)
-        # print((train_labels[train_labels==1]).shape)
-
-        # training using gradient descending
-        trained_weights = gradient_desc(train_features, train_labels, weights, 0.01, 3000, -1)
-        # de-normalize the weights
-        trained_weights = de_normalise(trained_weights, mean, std)
-
-        # evaluate the results
-        print(f"This is the run <{run_index+1}> !")
-        accuracy.append(evaluate(trained_weights, validation_features, validation_labels, mode="accuracy"))
-        precision.append(evaluate(trained_weights, validation_features, validation_labels, mode="precision"))
-        recall.append(evaluate(trained_weights, validation_features, validation_labels, mode="recall"))
-        print("accuracy: ", accuracy[run_index])
-        print("precision: ", precision[run_index])
-        print("recall: ", recall[run_index])
-        print("confusion matrix: ", evaluate(trained_weights, validation_features, validation_labels, mode="confusion_matrix"))
-        print(trained_weights)
-    print("\n\n\n")
-    print("Final Accuracy: ", np.array(accuracy).mean())
-    print("Final Precision: ", np.array(precision).mean())
-    print("Final Recall: ", np.array(recall).mean())
-
-"""
-随机划分 8训/2验
-Final Accuracy:  0.7669014084507042
-Final Precision:  0.7800957204331825
-Final Recall:  0.611864406779661
-分层采样 8训/2验
-Final Accuracy:  0.7909090909090909
-Final Precision:  0.7463015836174038
-Final Recall:  0.7344827586206896
-"""
 if __name__ == "__main__":
     # TOBE DONE:
     # sampling method
