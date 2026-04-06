@@ -38,7 +38,7 @@ def gradient_desc(features, labels, weights, lr, epoch, batch_scale=-1, progress
             weights.grad.zero_()
         if e % int(epoch / 16) == 0 and progress:
             print(f"epoch: {e + 1}, loss: {epoch_loss}")
-            print(evaluate(weights, features, labels))
+            print(f"accuracy in train set: {evaluate(weights, features, labels)}")
     timer.stop()
     return weights
 
@@ -73,6 +73,7 @@ def Loss(X_batch, y_batch, weights, method="BCE_logits_manual"):
 
 
 def sampling(df_features, df_labels, seed, method="random_frac", frac=0.8):
+    print("seed is: ", seed)
     if method == "random_frac":
         train_features = df_features.sample(frac=frac, random_state=seed)
         validation_features = df_features.drop(train_features.index)
@@ -94,8 +95,7 @@ def sampling(df_features, df_labels, seed, method="random_frac", frac=0.8):
 
 
 def main(gpu=False):
-    seed = 42
-    np.random.seed(seed)
+
     # switch device: gpu/cpu
     if gpu:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -104,7 +104,7 @@ def main(gpu=False):
     print(f"device using: {device}")
 
     # multiple runs of model to get average performance
-    run = 10
+    run = 50
     accuracy = []
     recall = []
     precision = []
@@ -119,7 +119,7 @@ def main(gpu=False):
         test_features = to_tensor(test_set())
 
         # sampling method apply to the data to separate train set and validation set
-        train_features, train_labels, validation_features, validation_labels = sampling(df_features, df_labels, seed, method="stratify", frac=0.8)
+        train_features, train_labels, validation_features, validation_labels = sampling(df_features, df_labels, run_index**2, method="stratify", frac=0.8)
 
         train_features, train_labels = to_tensor(train_features, train_labels)
         validation_features, validation_labels = to_tensor(validation_features, validation_labels)
@@ -155,7 +155,7 @@ def main(gpu=False):
         accuracy.append(evaluate(trained_weights, validation_features, validation_labels, mode="accuracy"))
         precision.append(evaluate(trained_weights, validation_features, validation_labels, mode="precision"))
         recall.append(evaluate(trained_weights, validation_features, validation_labels, mode="recall"))
-        print("accuracy: ", accuracy[run_index])
+        print("accuracy (in validation set): ", accuracy[run_index])
         print("precision: ", precision[run_index])
         print("recall: ", recall[run_index])
         print("confusion matrix: ", evaluate(trained_weights, validation_features, validation_labels, mode="confusion_matrix"))
@@ -164,16 +164,35 @@ def main(gpu=False):
     print("Final Accuracy: ", np.array(accuracy).mean())
     print("Final Precision: ", np.array(precision).mean())
     print("Final Recall: ", np.array(recall).mean())
+    print("Accuracy std: ", np.array(accuracy).std())
+    print("Precision std: ", np.array(precision).std())
+    print("Recall std: ", np.array(recall).std())
+
 
 """
-随机划分 8训/2验
-Final Accuracy:  0.7669014084507042
-Final Precision:  0.7800957204331825
-Final Recall:  0.611864406779661
-分层采样 8训/2验
-Final Accuracy:  0.7909090909090909
-Final Precision:  0.7463015836174038
-Final Recall:  0.7344827586206896
+Random Frac frac=0.8 ~ B
+Final Accuracy:  0.7885915492957746
+Final Precision:  0.7543982334192415
+Final Recall:  0.7067385303892931
+Accuracy std:  0.03038762994966123
+Precision std:  0.06294473136127064
+Recall std:  0.05037237566592636
+
+Stratify frac=0.8 ~ A
+Final Accuracy:  0.7977622377622379
+Final Precision:  0.7748982857701491
+Final Recall:  0.7127586206896551
+Accuracy std:  0.035072283071611546
+Precision std:  0.05754695391210016
+Recall std:  0.0646595400823599
+
+Bootstrap ~ B
+Final Accuracy:  0.7865250134868224
+Final Precision:  0.7583520968498099
+Final Recall:  0.7020016478374325
+Accuracy std:  0.02057853411986606
+Precision std:  0.03920533165682601
+Recall std:  0.04753781380151119
 """
 if __name__ == "__main__":
     # TOBE DONE:
