@@ -90,6 +90,13 @@ def sampling(df_features, df_labels, seed, method="random_frac", frac=0.8):
         validation_labels = df_labels.drop(train_labels.index)
         validation_features = df_features.loc[validation_labels.index]
         return train_features, train_labels, validation_features, validation_labels
+    elif method == "bootstrap":
+        train_features = df_features.sample(frac=1.0, random_state=seed, replace=True)
+        validation_features = df_features.drop(train_features.index)
+        train_labels = df_labels.loc[train_features.index]
+        validation_labels = df_labels.loc[validation_features.index]
+        print(validation_labels.shape[0] / df_labels.shape[0] * 100, "% of the data is in the validation set.")
+        return train_features, train_labels, validation_features, validation_labels
     else:
         return None
 
@@ -170,6 +177,8 @@ def main(gpu=False):
 
 
 """
+50 runs average results:
+
 Random Frac frac=0.8 ~ B
 Final Accuracy:  0.7885915492957746
 Final Precision:  0.7543982334192415
