@@ -102,7 +102,6 @@ def sampling(df_features, df_labels, seed, method="random_frac", frac=0.8):
 
 
 def main(gpu=False):
-
     # switch device: gpu/cpu
     if gpu:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -116,14 +115,14 @@ def main(gpu=False):
     recall = []
     precision = []
 
+    # initialise train and test datasets
+    df_features, df_labels = train_set()
+    df_labels = pd.DataFrame(df_labels)
+    test_features = to_tensor(test_set())
+
     for run_index in range(run):
         # set different random seed by the number of runs
         np.random.seed(run_index)
-
-        # initialise train and test datasets
-        df_features, df_labels = train_set()
-        df_labels = pd.DataFrame(df_labels)
-        test_features = to_tensor(test_set())
 
         # sampling method apply to the data to separate train set and validation set
         train_features, train_labels, validation_features, validation_labels = sampling(df_features, df_labels, run_index**2, method="stratify", frac=0.8)
