@@ -3,6 +3,7 @@ import torch
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+import time
 from torch.utils.data import DataLoader, TensorDataset
 from module.preprocess import *
 from module.timer import Timer
@@ -63,10 +64,6 @@ def Loss(X_batch, y_batch, weights, method="BCE_logits_manual"):
     elif method == "BCE_logits_manual":
         # manual version of BCE with Logits, avoid log0
         logits = X_batch @ weights[1:] + weights[0]
-        if random == 12:
-            print(X_batch)
-            print(y_batch)
-            print(logits)
         # formula: loss = max(0,x)− x*y + log(1+e^-|x|)
         loss = torch.where(logits >= 0, logits, torch.zeros_like(logits)) - logits * y_batch + torch.log(1 + torch.exp(-(logits.abs())))
         # sum up the tensor into a scalar
@@ -106,7 +103,6 @@ def sampling(df_features, df_labels, seed, method="random_frac", frac=0.8):
 
 
 def data_simulate(df_features, df_labels, frac, seed, mode="label bias"):
-    print("seed is: ", seed)
     if mode == "label bias":
         if df_features.loc[df_labels["Survived"] == 1].shape[0] >= df_features.loc[df_labels["Survived"] == 0].shape[0]:
             # here frac is for the percentage of negative samples
@@ -162,10 +158,7 @@ def main(gpu=False):
     print(df_labels.loc[df_labels["Survived"] == 1].shape)
     print(df_labels.shape)
     for run_index in range(run):
-        run_index = 12
         # set different random seed by the number of runs
-        global random
-        random = run_index
         np.random.seed(run_index**2)
         # dataset simulation
         simulation_features, simulation_labels = data_simulate(df_features, df_labels, frac=0.2, seed=run_index**2, mode="stratify_drop")
@@ -177,6 +170,7 @@ def main(gpu=False):
 
         train_features, train_labels = to_tensor(train_features, train_labels)
         validation_features, validation_labels = to_tensor(validation_features, validation_labels)
+
         print(train_features.shape, train_labels.shape)
         print(validation_features.shape, validation_labels.shape)
 
@@ -189,6 +183,9 @@ def main(gpu=False):
 
         # normalize using z-score
         train_features, mean, std = normalise(train_features, "z-score")
+
+        print(train_features.shape, train_labels.shape)
+        print(validation_features.shape, validation_labels.shape)
 
         # there's 10 weights for 10 features and 1 bias, in total 11 weights.
         weights = torch.tensor(np.random.randn(11, 1), dtype=torch.float32).to(device)
