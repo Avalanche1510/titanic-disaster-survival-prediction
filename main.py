@@ -63,6 +63,10 @@ def Loss(X_batch, y_batch, weights, method="BCE_logits_manual"):
     elif method == "BCE_logits_manual":
         # manual version of BCE with Logits, avoid log0
         logits = X_batch @ weights[1:] + weights[0]
+        if random == 12:
+            print(X_batch)
+            print(y_batch)
+            print(logits)
         # formula: loss = max(0,x)− x*y + log(1+e^-|x|)
         loss = torch.where(logits >= 0, logits, torch.zeros_like(logits)) - logits * y_batch + torch.log(1 + torch.exp(-(logits.abs())))
         # sum up the tensor into a scalar
@@ -101,6 +105,42 @@ def sampling(df_features, df_labels, seed, method="random_frac", frac=0.8):
         return None
 
 
+def data_simulate(df_features, df_labels, frac, seed, mode="label bias"):
+    print("seed is: ", seed)
+    if mode == "label bias":
+        if df_features.loc[df_labels["Survived"] == 1].shape[0] >= df_features.loc[df_labels["Survived"] == 0].shape[0]:
+            # here frac is for the percentage of negative samples
+            negative_frac = frac
+            positive_frac = 1 - frac
+            positive_drop_num = df_features.loc[df_labels["Survived"] == 1].shape[0] - round(df_features.loc[df_labels["Survived"] == 0].shape[0] / negative_frac * positive_frac)
+            if positive_drop_num < 0:
+                print("The percentage of negative samples is too low, please reduce the percentage of negative samples.")
+                return None
+            df_features = df_features.drop(df_features.loc[df_labels["Survived"] == 1].sample(n=positive_drop_num, random_state=seed).index)
+            df_labels = df_labels.drop(df_labels.loc[df_labels["Survived"] == 1].sample(n=positive_drop_num, random_state=seed).index)
+            return df_features, df_labels
+        else:
+            # here frac is for the percentage of positive samples
+            negative_frac = 1 - frac
+            positive_frac = frac
+            negative_drop_num = df_features.loc[df_labels["Survived"] == 0].shape[0] - round(df_features.loc[df_labels["Survived"] == 1].shape[0] / positive_frac * negative_frac)
+            if negative_drop_num < 0:
+                print("The percentage of positive samples is too low, please reduce the percentage of negative samples.")
+                return None
+            df_labels = df_labels.drop(df_labels.loc[df_labels["Survived"] == 0].sample(n=negative_drop_num, random_state=seed).index)
+            df_features = df_features.loc[df_labels.index]
+            return df_features, df_labels
+    elif mode == "stratify_drop":
+        df_neg = df_labels.loc[df_labels["Survived"] == 0].sample(frac=frac, random_state=seed)
+        df_pos = df_labels.loc[df_labels["Survived"] == 1].sample(frac=frac, random_state=seed)
+        # combine both positive and negative samples and refresh the order of samples
+        df_labels = pd.concat([df_neg, df_pos]).sample(frac=1, random_state=seed)
+        df_features = df_features.loc[df_labels.index]
+        return df_features, df_labels
+    else:
+        return None
+
+
 def main(gpu=False):
     # switch device: gpu/cpu
     if gpu:
@@ -118,14 +158,22 @@ def main(gpu=False):
     # initialise train and test datasets
     df_features, df_labels = train_set()
     df_labels = pd.DataFrame(df_labels)
-    test_features = to_tensor(test_set())
-
+    # test_features = to_tensor(test_set())
+    print(df_labels.loc[df_labels["Survived"] == 1].shape)
+    print(df_labels.shape)
     for run_index in range(run):
+        run_index = 12
         # set different random seed by the number of runs
-        np.random.seed(run_index)
+        global random
+        random = run_index
+        np.random.seed(run_index**2)
+        # dataset simulation
+        simulation_features, simulation_labels = data_simulate(df_features, df_labels, frac=0.2, seed=run_index**2, mode="stratify_drop")
+        print(simulation_labels.loc[df_labels["Survived"] == 1].shape)
+        print(simulation_labels.loc[df_labels["Survived"] == 0].shape)
 
         # sampling method apply to the data to separate train set and validation set
-        train_features, train_labels, validation_features, validation_labels = sampling(df_features, df_labels, run_index**2, method="stratify", frac=0.8)
+        train_features, train_labels, validation_features, validation_labels = sampling(simulation_features, simulation_labels, run_index**2, method="bootstrap", frac=0.8)
 
         train_features, train_labels = to_tensor(train_features, train_labels)
         validation_features, validation_labels = to_tensor(validation_features, validation_labels)
@@ -137,7 +185,7 @@ def main(gpu=False):
             train_labels = train_labels.to(device)
             validation_features = validation_features.to(device)
             validation_labels = validation_labels.to(device)
-            test_features = test_features.to(device)
+            # test_features = test_features.to(device)
 
         # normalize using z-score
         train_features, mean, std = normalise(train_features, "z-score")
