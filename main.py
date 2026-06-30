@@ -146,7 +146,7 @@ def main(gpu=False):
     print(f"device using: {device}")
 
     # multiple runs of model to get average performance
-    run = 50
+    run = 1
     accuracy = []
     recall = []
     precision = []
